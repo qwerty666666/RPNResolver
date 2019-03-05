@@ -1,11 +1,9 @@
 import operators.AddOperator;
-import operators.DoubleOperator.DoubleAddOperator;
 import operators.Operator;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,21 +30,18 @@ class ExpressionTest {
 
     @Test
     void testPushOperatorIllegalState() {
-        Operator operatorMock = Mockito.mock(Operator.class);
-        Operand operandMock = Mockito.mock(Operand.class);
-
         assertThrows(
             IllegalStateException.class,
-            () -> new Expression<>().pushOperator(operatorMock),
+            () -> new Expression<>().pushOperator(Operator.class),
             "Operator can't be at the first position in expression"
         );
         assertThrows(
             IllegalStateException.class,
             () -> {
                 new Expression<>()
-                    .pushOperand(operandMock)
-                    .pushOperator(operatorMock)
-                    .pushOperator(operatorMock);
+                    .pushOperand(Mockito.mock(OperandSupplier.class))
+                    .pushOperator(Operator.class)
+                    .pushOperator(Operator.class);
             },
             "Operators can't go after another operator"
         );
@@ -71,18 +66,17 @@ class ExpressionTest {
     @Test
     void pushOperator() {
         Expression expr = new Expression();
-        Operator op = Mockito.mock(Operator.class);
-        expr.pushOperand(Mockito.mock(Operand.class))
-            .pushOperator(op);
+        expr.pushOperand(Mockito.mock(OperandSupplier.class))
+            .pushOperator(Operator.class);
 
-        assertEquals(expr.getLastToken(), op, "When push operator, it must be at the last position");
+        assertEquals(expr.getLastToken(), Operator.class, "When push operator, it must be at the last position");
     }
 
 
     @Test
     void pushOperand() {
         Expression expr = new Expression();
-        Operand op = Mockito.mock(Operand.class);
+        Operand op = Mockito.mock(OperandSupplier.class);
         expr.pushOperand(op);
 
         assertEquals(expr.getLastToken(), op, "When push operand, it must be at the last position");
@@ -90,10 +84,10 @@ class ExpressionTest {
 
 
     @Test
-    void testPushFunction() {
+    void pushFunction() {
         Function f = Mockito.mock(Function.class, Mockito.CALLS_REAL_METHODS);
-        Operand arg1 = Mockito.mock(Operand.class);
-        Operand arg2 = Mockito.mock(Operand.class);
+        Operand arg1 = Mockito.mock(OperandSupplier.class);
+        Operand arg2 = Mockito.mock(OperandSupplier.class);
         f.args = Arrays.asList(arg1, arg2);
 
         Expression expr = new Expression();
@@ -116,27 +110,20 @@ class ExpressionTest {
 
     @Test
     void testPushGroupRecursively() {
-        Operand operand1 = Mockito.mock(Operand.class);
-        Operand operand2 = Mockito.mock(Operand.class);
-        Operand operand3 = Mockito.mock(Operand.class);
-        Operand operand4 = Mockito.mock(Operand.class);
-        Operator operator1 = Mockito.mock(Operator.class);
-        Operator operator2 = Mockito.mock(Operator.class);
-        Operator operator3 = Mockito.mock(Operator.class);
+        Operand operand1 = Mockito.mock(OperandSupplier.class);
+        Operand operand2 = Mockito.mock(OperandSupplier.class);
+        Operand operand3 = Mockito.mock(OperandSupplier.class);
+        Operand operand4 = Mockito.mock(OperandSupplier.class);
 
         Expression expr = new Expression()
             .pushGroup(
                 new Expression()
                     .pushOperand(operand1)
-                    .pushOperator(operator1)
-                    .pushGroup(
-                        new Expression()
+                    .add(new Expression()
                             .pushOperand(operand2)
-                            .pushOperator(operator2)
-                            .pushOperand(operand3)
+                            .add(operand3)
                     )
-                    .pushOperator(operator3)
-                    .pushOperand(operand4)
+                    .add(operand4)
             );
 
         assertArrayEquals(
@@ -144,13 +131,13 @@ class ExpressionTest {
             new Object[]{
                 Parentheses.OPENING_PAREN,
                     operand1,
-                    operator1,
+                    AddOperator.class,
                     Parentheses.OPENING_PAREN,
                         operand2,
-                        operator2,
+                        AddOperator.class,
                         operand3,
                     Parentheses.CLOSING_PAREN,
-                    operator3,
+                    AddOperator.class,
                     operand4,
                 Parentheses.CLOSING_PAREN
             },
@@ -160,27 +147,35 @@ class ExpressionTest {
 
 
     @Test
-    void testUnspecifiedOperator() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new Expression().getOperatorInstance(AddOperator.class),
-            "Must throw exception when Operator implementation is not specified"
+    void push() {
+        Operand operand = Mockito.mock(OperandSupplier.class);
+        Expression e = new Expression()
+            .pushOperand(operand)
+            .push(AddOperator.class, operand);
+
+        assertEquals(AddOperator.class, e.getTokens().get(1),
+            "Should add operator to the tokens stack"
+        );
+        assertEquals(operand, e.getLastToken(), "Should push operand to the stack");
+    }
+
+
+    @Test
+    void isTokenOperator() {
+        assertAll("Token is operator when it is subclass of Operator.class",
+            () -> {
+                assertTrue(new Expression<>().isTokenOperator(AddOperator.class));
+                assertTrue(new Expression<>().isTokenOperator(Operator.class));
+            }
         );
     }
 
 
     @Test
-    void push() {
-        Operand operand = Mockito.mock(Operand.class);
-        Expression e = new Expression(new HashMap() {{
-            put(AddOperator.class, DoubleAddOperator.class);
-        }})
-            .pushOperand(operand)
-            .push(AddOperator.class, operand);
-
-        assertTrue(e.getTokens().get(1) instanceof DoubleAddOperator,
-            "Should create operator implementation and add it to tokens stack"
+    void pushGenericOperand() {
+        Integer test = new Integer(1);
+        assertTrue(new Expression<Integer>().pushOperand(test).getLastToken() instanceof OperandSupplier,
+            "Generic type should be converted to OperandSupplier"
         );
-        assertEquals(operand, e.getLastToken(), "Should push operand to the stack");
     }
 }

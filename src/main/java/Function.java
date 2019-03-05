@@ -5,7 +5,7 @@ import java.util.List;
  * Superinterface for all mathematical functions
  */
 public abstract class Function<T> implements Operand<T> {
-    protected List<Object> args;
+    protected List<Operand<T>> args;
 
 
     @SafeVarargs
@@ -17,7 +17,7 @@ public abstract class Function<T> implements Operand<T> {
     /**
      * @return the function arguments
      */
-    public List<Object> getArgs() {
+    public List<Operand<T>> getArgs() {
         return this.args;
     }
 

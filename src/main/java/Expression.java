@@ -1,9 +1,7 @@
 import operators.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 
 public class Expression<T> implements Operand<T> {
@@ -20,19 +18,6 @@ public class Expression<T> implements Operand<T> {
      * Separate arguments in functions
      */
     public static Object FUNCTION_ARGUMENT_SEPARATOR = new Object();
-    /**
-     * Map operators to its executors i.g. AddOperator => DoubleAddOperator.class
-     */
-    protected Map<Class<? extends Operator>, Class<? extends Operator<T>>> operatorsMap = new HashMap<>();
-
-
-
-    protected Expression() {}
-
-
-    public Expression(Map<Class<? extends Operator>, Class<? extends Operator<T>>> operatorsMap) {
-        this.setOperatorsMap(operatorsMap);
-    }
 
 
     /**
@@ -50,10 +35,19 @@ public class Expression<T> implements Operand<T> {
      * @return can push operand to the top of the stack
      */
     protected boolean isPushOperandAllowed() {
+        Object lastToken = getLastToken();
         return tokens.isEmpty() ||
-            getLastToken() instanceof Operator ||
-            getLastToken() == Parentheses.OPENING_PAREN ||
-            getLastToken() == Expression.FUNCTION_ARGUMENT_SEPARATOR;
+            this.isTokenOperator(lastToken) ||
+            lastToken == Parentheses.OPENING_PAREN ||
+            lastToken == Expression.FUNCTION_ARGUMENT_SEPARATOR;
+    }
+
+
+    /**
+     * Check if the token is operator
+     */
+    protected boolean isTokenOperator(Object token) {
+        return (token instanceof Class) && Operator.class.isAssignableFrom((Class)token);
     }
 
 
@@ -87,27 +81,14 @@ public class Expression<T> implements Operand<T> {
 
 
     /**
-     * Push operand to the stack
-     */
-    protected Expression<T> pushOperand(Operand<T> operand) {
-        if (!isPushOperandAllowed()) {
-            throw new IllegalStateException("Operand must be placed forward operator or be the first token in expression");
-        }
-
-        tokens.add(operand);
-
-        return this;
-    }
-
-
-    /**
      * Push operator to the stack
      */
-    protected Expression<T> pushOperator(Operator<T> operator) {
+    protected Expression<T> pushOperator(Class<? extends Operator> operator) {
         if (tokens.isEmpty()) {
             throw new IllegalStateException("Operator can't be the first token in expression");
         }
-        if (getLastToken() instanceof Operator) {
+
+        if (isTokenOperator(getLastToken())) {
             throw new IllegalStateException("Operator can't forward another operator");
         }
 
@@ -118,25 +99,24 @@ public class Expression<T> implements Operand<T> {
 
 
     /**
+     * Push operand supplier to the stack
+     */
+    protected Expression<T> pushOperandSupplier(OperandSupplier<T> operand) {
+        this.tokens.add(operand);
+        return this;
+    }
+
+
+    /**
      * Push operand to the stack
      */
     protected Expression<T> pushFunction(Function<T> function) {
-        if (!isPushOperandAllowed()) {
-            throw new IllegalStateException("Function must be placed forward operator or be the first token in expression");
-        }
-
         tokens.add(function);
         this.openParenthesis();
 
         int ind = 0;
-        for (Object arg: function.getArgs()) {
-            if (arg instanceof Expression) {
-                this.pushGroup((Expression<T>)arg);
-            } else if (arg instanceof Operand) {
-                this.pushOperand((Operand<T>)arg);
-            } else {
-                throw new IllegalArgumentException("Function arguments must be Operand or Expression which can be evaluated to operand");
-            }
+        for (Operand<T> arg: function.getArgs()) {
+            this.pushOperand(arg);
 
             if (++ind < function.getArgs().size()) {
                 tokens.add(Expression.FUNCTION_ARGUMENT_SEPARATOR);
@@ -153,10 +133,6 @@ public class Expression<T> implements Operand<T> {
      * Push tokens from another expression. I.e. adds expression in brackets
      */
     protected Expression<T> pushGroup(Expression<T> group) {
-        if (!isPushOperandAllowed()) {
-            throw new IllegalStateException("Group must be forward operator or be the first token in expression");
-        }
-
         this.openParenthesis();
         tokens.addAll(group.getTokens());
         this.closeParenthesis();
@@ -166,69 +142,99 @@ public class Expression<T> implements Operand<T> {
 
 
     /**
-     * @return the expression tokens stack
-     */
-    public List<Object> getTokens() {
-        return this.tokens;
-    }
-
-
-    /**
-     * Map operators to its executors of specified type.
-     * i.g. AddOperator.class => new DoubleAddOperator()
-     */
-    public void setOperatorsMap(Map<Class<? extends Operator>, Class<? extends Operator<T>>> operatorsMap) {
-        this.operatorsMap = operatorsMap;
-    }
-
-
-    /**
-     * @return executor instance for the specified operator
-     */
-    protected Operator<T> getOperatorInstance(Class<? extends Operator> operator) {
-        if (!this.operatorsMap.containsKey(operator)) {
-            throw new IllegalArgumentException("Operator executor doesn't specified for " + operator);
-        }
-
-        try {
-            return this.operatorsMap.get(operator).newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-    /**
      * Add operator and operand to the tokens stack
      */
     protected Expression<T> push(Class<? extends Operator> operator, Operand<T> operand) {
-        this.pushOperator(this.getOperatorInstance(operator));
+        this.pushOperator(operator);
         this.pushOperand(operand);
 
         return this;
     }
 
 
+    /****************************
+     *
+     *    Public interface
+     *
+     ***************************/
+
+
+    /**
+     * Push operand to the stack
+     */
+    public Expression<T> pushOperand(T operand) {
+        // replace T with OperandSupplier
+        this.pushOperand(new OperandSupplier<>(operand));
+        return this;
+    }
+
+
+    /**
+     * Push operand to the stack
+     */
+    public Expression<T> pushOperand(Operand<T> operand) {
+        if (!isPushOperandAllowed()) {
+            throw new IllegalStateException("Operand must be placed forward operator or be the first token in expression");
+        }
+
+        if (operand instanceof Function) {
+            this.pushFunction((Function<T>)operand);
+        } else if (operand instanceof Expression) {
+            this.pushGroup((Expression<T>)operand);
+        } else if (operand instanceof OperandSupplier) {
+            this.pushOperandSupplier((OperandSupplier<T>)operand);
+        } else {
+            throw new IllegalArgumentException("Argument should be instance of Function, Expression or OperandSupplier");
+        }
+
+        return this;
+    }
+
+
+    /**
+     * Add operand to expression. <br>
+     * If operand is Expression operand will be considered as group in brackets.
+     */
     public Expression<T> add(Operand<T> operand) {
         this.push(AddOperator.class, operand);
         return this;
     }
 
 
+    /**
+     * Subtract operand from expression. <br>
+     * If operand is Expression operand will be considered as group in brackets.
+     */
     public Expression<T> subtract(Operand<T> operand) {
         this.push(SubtractOperator.class, operand);
         return this;
     }
 
 
+    /**
+     * Add multiplying to operand to expression. Be aware of operators precedence. <br>
+     * If operand is Expression operand will be considered as group in brackets.
+     */
     public Expression<T> multiply(Operand<T> operand) {
         this.push(MultiplyOperator.class, operand);
         return this;
     }
 
 
+    /**
+     * Add dividing by operand to expression. Be aware of operators precedence. <br>
+     * If operand is Expression operand will be considered as group in brackets.
+     */
     public Expression<T> divide(Operand<T> operand) {
         this.push(DivideOperator.class, operand);
         return this;
+    }
+
+
+    /**
+     * @return the expression tokens stack
+     */
+    public List<Object> getTokens() {
+        return this.tokens;
     }
 }
