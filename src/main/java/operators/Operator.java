@@ -1,13 +1,19 @@
 package operators;
 
+import operators.OperatorAssociativity;
+
 /**
- * Superinterface for all mathematical operators
+ * Superinterface for all arithmetic operators
  */
 public interface Operator<T> {
     /**
      * @return the operator associativity
      */
     public abstract OperatorAssociativity getAssociativity();
+    /**
+     * @return the operator precedence
+     */
+    public abstract int getPrecedence();
 
 
     /**

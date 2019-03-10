@@ -1,8 +1,10 @@
+import operands.Operand;
+
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * Superinterface for all mathematical functions
+ * Superinterface for all arithmetic functions
  */
 public abstract class Function<T> implements Operand<T> {
     protected List<Operand<T>> args;

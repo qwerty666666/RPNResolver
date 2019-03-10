@@ -1,17 +1,19 @@
+import operands.Operand;
+import operands.OperandSupplier;
 import operators.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class Expression<T> implements Operand<T> {
+public class Tokenizer<T> implements Operand<T> {
     /**
-     * Stack expression tokens.
-     * Token can be Operand, Operator, Function and Parentheses
+     * Stack expressionBuilder units.
+     * Token can be operands.Operand, operators.Operator, Function and Parentheses
      */
     protected List<Object> tokens = new ArrayList<>();
     /**
-     * Count of non-closed parenthesis in expression
+     * Count of non-closed parenthesis in expressionBuilder
      */
     protected int openedParenthesisCount = 0;
     /**
@@ -39,7 +41,7 @@ public class Expression<T> implements Operand<T> {
         return tokens.isEmpty() ||
             this.isTokenOperator(lastToken) ||
             lastToken == Parentheses.OPENING_PAREN ||
-            lastToken == Expression.FUNCTION_ARGUMENT_SEPARATOR;
+            lastToken == Tokenizer.FUNCTION_ARGUMENT_SEPARATOR;
     }
 
 
@@ -54,7 +56,7 @@ public class Expression<T> implements Operand<T> {
     /**
      * Open parenthesis
      */
-    protected Expression<T> openParenthesis() {
+    protected Tokenizer<T> openParenthesis() {
         this.tokens.add(Parentheses.OPENING_PAREN);
         this.openedParenthesisCount++;
 
@@ -65,9 +67,9 @@ public class Expression<T> implements Operand<T> {
     /**
      * Close parenthesis
      */
-    protected Expression<T> closeParenthesis() {
+    protected Tokenizer<T> closeParenthesis() {
         if (this.openedParenthesisCount <= 0) {
-            throw new IllegalStateException("Expression has no any opened parenthesis");
+            throw new IllegalStateException("ExpressionBuilder has no any opened parenthesis");
         }
         if (this.getLastToken() instanceof Operator) {
             throw new IllegalStateException("Close parenthesis can't be placed after operator");
@@ -83,13 +85,13 @@ public class Expression<T> implements Operand<T> {
     /**
      * Push operator to the stack
      */
-    protected Expression<T> pushOperator(Class<? extends Operator> operator) {
+    protected Tokenizer<T> pushOperator(Class<? extends Operator> operator) {
         if (tokens.isEmpty()) {
-            throw new IllegalStateException("Operator can't be the first token in expression");
+            throw new IllegalStateException("operators.Operator can't be the first token in expressionBuilder");
         }
 
         if (isTokenOperator(getLastToken())) {
-            throw new IllegalStateException("Operator can't forward another operator");
+            throw new IllegalStateException("operators.Operator can't forward another operator");
         }
 
         tokens.add(operator);
@@ -101,7 +103,7 @@ public class Expression<T> implements Operand<T> {
     /**
      * Push operand supplier to the stack
      */
-    protected Expression<T> pushOperandSupplier(OperandSupplier<T> operand) {
+    protected Tokenizer<T> pushOperandSupplier(OperandSupplier<T> operand) {
         this.tokens.add(operand);
         return this;
     }
@@ -110,7 +112,7 @@ public class Expression<T> implements Operand<T> {
     /**
      * Push operand to the stack
      */
-    protected Expression<T> pushFunction(Function<T> function) {
+    protected Tokenizer<T> pushFunction(Function<T> function) {
         tokens.add(function);
         this.openParenthesis();
 
@@ -119,7 +121,7 @@ public class Expression<T> implements Operand<T> {
             this.pushOperand(arg);
 
             if (++ind < function.getArgs().size()) {
-                tokens.add(Expression.FUNCTION_ARGUMENT_SEPARATOR);
+                tokens.add(Tokenizer.FUNCTION_ARGUMENT_SEPARATOR);
             }
         }
 
@@ -130,9 +132,9 @@ public class Expression<T> implements Operand<T> {
 
 
     /**
-     * Push tokens from another expression. I.e. adds expression in brackets
+     * Push units from another expressionBuilder. I.e. adds expressionBuilder in brackets
      */
-    protected Expression<T> pushGroup(Expression<T> group) {
+    protected Tokenizer<T> pushGroup(Tokenizer<T> group) {
         this.openParenthesis();
         tokens.addAll(group.getTokens());
         this.closeParenthesis();
@@ -142,9 +144,9 @@ public class Expression<T> implements Operand<T> {
 
 
     /**
-     * Add operator and operand to the tokens stack
+     * Add operator and operand to the units stack
      */
-    protected Expression<T> push(Class<? extends Operator> operator, Operand<T> operand) {
+    protected Tokenizer<T> push(Class<? extends Operator> operator, Operand<T> operand) {
         this.pushOperator(operator);
         this.pushOperand(operand);
 
@@ -162,8 +164,8 @@ public class Expression<T> implements Operand<T> {
     /**
      * Push operand to the stack
      */
-    public Expression<T> pushOperand(T operand) {
-        // replace T with OperandSupplier
+    public Tokenizer<T> pushOperand(T operand) {
+        // replace T with operands.OperandSupplier
         this.pushOperand(new OperandSupplier<>(operand));
         return this;
     }
@@ -172,19 +174,19 @@ public class Expression<T> implements Operand<T> {
     /**
      * Push operand to the stack
      */
-    public Expression<T> pushOperand(Operand<T> operand) {
+    public Tokenizer<T> pushOperand(Operand<T> operand) {
         if (!isPushOperandAllowed()) {
-            throw new IllegalStateException("Operand must be placed forward operator or be the first token in expression");
+            throw new IllegalStateException("operands.Operand must be placed forward operator or be the first token in expressionBuilder");
         }
 
         if (operand instanceof Function) {
             this.pushFunction((Function<T>)operand);
-        } else if (operand instanceof Expression) {
-            this.pushGroup((Expression<T>)operand);
+        } else if (operand instanceof Tokenizer) {
+            this.pushGroup((Tokenizer<T>)operand);
         } else if (operand instanceof OperandSupplier) {
             this.pushOperandSupplier((OperandSupplier<T>)operand);
         } else {
-            throw new IllegalArgumentException("Argument should be instance of Function, Expression or OperandSupplier");
+            throw new IllegalArgumentException("Argument should be instance of Function, ExpressionBuilder or operands.OperandSupplier");
         }
 
         return this;
@@ -192,47 +194,47 @@ public class Expression<T> implements Operand<T> {
 
 
     /**
-     * Add operand to expression. <br>
-     * If operand is Expression operand will be considered as group in brackets.
+     * Add operand to expressionBuilder. <br>
+     * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
-    public Expression<T> add(Operand<T> operand) {
+    public Tokenizer<T> add(Operand<T> operand) {
         this.push(AddOperator.class, operand);
         return this;
     }
 
 
     /**
-     * Subtract operand from expression. <br>
-     * If operand is Expression operand will be considered as group in brackets.
+     * Subtract operand from expressionBuilder. <br>
+     * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
-    public Expression<T> subtract(Operand<T> operand) {
+    public Tokenizer<T> subtract(Operand<T> operand) {
         this.push(SubtractOperator.class, operand);
         return this;
     }
 
 
     /**
-     * Add multiplying to operand to expression. Be aware of operators precedence. <br>
-     * If operand is Expression operand will be considered as group in brackets.
+     * Add multiplying to operand to expressionBuilder. Be aware of operators precedence. <br>
+     * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
-    public Expression<T> multiply(Operand<T> operand) {
+    public Tokenizer<T> multiply(Operand<T> operand) {
         this.push(MultiplyOperator.class, operand);
         return this;
     }
 
 
     /**
-     * Add dividing by operand to expression. Be aware of operators precedence. <br>
-     * If operand is Expression operand will be considered as group in brackets.
+     * Add dividing by operand to expressionBuilder. Be aware of operators precedence. <br>
+     * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
-    public Expression<T> divide(Operand<T> operand) {
+    public Tokenizer<T> divide(Operand<T> operand) {
         this.push(DivideOperator.class, operand);
         return this;
     }
 
 
     /**
-     * @return the expression tokens stack
+     * @return the expressionBuilder units stack
      */
     public List<Object> getTokens() {
         return this.tokens;
