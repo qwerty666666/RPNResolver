@@ -1,3 +1,4 @@
+import expression.ExpressionUtils;
 import operands.Operand;
 import operands.OperandSupplier;
 import operators.AddOperator;
@@ -48,12 +49,6 @@ class ExpressionBuilderTest {
 
 
     @Test
-    void testIsUnitOperand() {
-        assertTrue(new ExpressionBuilder<>().isUnitOperand(Mockito.mock(Operand.class)));
-    }
-
-
-    @Test
     void testPushOperator() {
         ExpressionBuilder expr = new ExpressionBuilder();
         expr.pushOperand(Mockito.mock(OperandSupplier.class))
@@ -90,17 +85,6 @@ class ExpressionBuilderTest {
             () -> assertEquals(operand, e.getLastUnit(),
                 "Must push operand to the stack"
             )
-        );
-    }
-
-
-    @Test
-    void testIsUnitOperator() {
-        assertAll("Token is operator when it is subclass of Operator.class",
-            () -> {
-                assertTrue(new ExpressionBuilder<>().isUnitOperator(AddOperator.class));
-                assertTrue(new ExpressionBuilder<>().isUnitOperator(Operator.class));
-            }
         );
     }
 

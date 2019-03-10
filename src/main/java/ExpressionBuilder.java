@@ -1,3 +1,4 @@
+import expression.ExpressionUtils;
 import operands.Operand;
 import operands.OperandSupplier;
 import operators.*;
@@ -63,21 +64,6 @@ public class ExpressionBuilder<T> implements Operand<T> {
         return units.get(units.size() - 1);
     }
 
-    /**
-     * Check if the unit is operator
-     */
-    protected boolean isUnitOperator(Object unit) {
-        return (unit instanceof Class) && Operator.class.isAssignableFrom((Class)unit);
-    }
-
-
-    /**
-     * Check if the unit is operator
-     */
-    protected boolean isUnitOperand(Object unit) {
-        return (unit instanceof Operand);
-    }
-
 
     /**
      * Push operator to the stack
@@ -87,7 +73,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
             throw new IllegalStateException("operators.Operator can't be the first token in expressionBuilder");
         }
 
-        if (isUnitOperator(getLastUnit())) {
+        if (ExpressionUtils.isTokenOperator(getLastUnit())) {
             throw new IllegalStateException("operators.Operator can't forward another operator");
         }
 
@@ -111,7 +97,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
      * Push operand to the stack
      */
     protected ExpressionBuilder<T> pushOperand(Operand<T> operand) {
-        if (!units.isEmpty() && isUnitOperand(getLastUnit())) {
+        if (!units.isEmpty() && ExpressionUtils.isTokenOperand(getLastUnit())) {
             throw new IllegalStateException("Can't push operand forward another operand");
         }
 

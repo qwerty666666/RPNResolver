@@ -1,3 +1,4 @@
+import expression.ExpressionUtils;
 import operands.Operand;
 import operands.OperandSupplier;
 import operators.AddOperator;
@@ -101,18 +102,9 @@ class TokenizerTest {
     void testIsOperator() {
         assertAll("Token is operator when it is subclass of Operator.class",
             () -> {
-                assertTrue(new ExpressionBuilder<>().isUnitOperator(AddOperator.class));
-                assertTrue(new ExpressionBuilder<>().isUnitOperator(Operator.class));
+                assertTrue(ExpressionUtils.isTokenOperator(AddOperator.class));
+                assertTrue(ExpressionUtils.isTokenOperator(Operator.class));
             }
-        );
-    }
-
-
-    @Test
-    void testIsOperand() {
-        assertTrue(
-            new Tokenizer().isOperand(Mockito.mock(Operand.class)),
-            "Token is operand when it extends Operand class"
         );
     }
 }

@@ -1,3 +1,4 @@
+import expression.ExpressionUtils;
 import operands.Operand;
 import operands.OperandSupplier;
 import operators.*;
@@ -31,22 +32,6 @@ public class Tokenizer<T> {
 
 
     /**
-     * Check if the unit is operator
-     */
-    protected boolean isOperator(Object unit) {
-        return (unit instanceof Class) && Operator.class.isAssignableFrom((Class)unit);
-    }
-
-
-    /**
-     * Check if the unit is operator
-     */
-    protected boolean isOperand(Object unit) {
-        return (unit instanceof Operand);
-    }
-
-
-    /**
      * Retrieve operator tokens
      */
     protected List<Object> getOperatorTokens(Class<? extends Operator> operator) {
@@ -61,9 +46,9 @@ public class Tokenizer<T> {
         List<Object> tokens = new ArrayList<>();
 
         for (Object unit: eb.getUnits()) {
-            if (isOperator(unit)) {
+            if (ExpressionUtils.isTokenOperator(unit)) {
                 tokens.addAll(this.getOperatorTokens((Class<? extends Operator>) unit));
-            } else if (isOperand(unit)) {
+            } else if (ExpressionUtils.isTokenOperand(unit)) {
                 tokens.addAll(this.getOperandTokens((Operand)unit));
             } else {
                 throw new IllegalArgumentException("Expression units can be only operand and operators");
@@ -96,7 +81,7 @@ public class Tokenizer<T> {
             tokens.addAll(this.getOperandTokens(arg));
 
             if (++ind < function.getArgs().size()) {
-                tokens.add(Tokenizer.FUNCTION_ARGUMENT_SEPARATOR);
+                tokens.add(FUNCTION_ARGUMENT_SEPARATOR);
             }
         }
 
