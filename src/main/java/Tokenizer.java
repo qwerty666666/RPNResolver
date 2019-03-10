@@ -3,240 +3,135 @@ import operands.OperandSupplier;
 import operators.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
-public class Tokenizer<T> implements Operand<T> {
+/**
+ * Tokenize the expression.
+ * Split giver expression into operators, operands, functions, brackets and so on.
+ *
+ * @param <T>
+ */
+public class Tokenizer<T> {
     /**
-     * Stack expressionBuilder units.
-     * Token can be operands.Operand, operators.Operator, Function and Parentheses
-     */
-    protected List<Object> tokens = new ArrayList<>();
-    /**
-     * Count of non-closed parenthesis in expressionBuilder
-     */
-    protected int openedParenthesisCount = 0;
-    /**
-     * Separate arguments in functions
+     * Token representing arguments separator in functions
      */
     public static Object FUNCTION_ARGUMENT_SEPARATOR = new Object();
 
 
     /**
-     * @return The last token in the stack
+     * Tokenize the expression to to plain tokens
+     *
+     * @return tokens stack
      */
-    protected Object getLastToken() {
-        if (tokens.isEmpty()) {
-            return null;
-        }
-        return tokens.get(tokens.size() - 1);
+    public List<Object> tokenize(ExpressionBuilder eb) {
+        return this.getExpressionTokens(eb);
     }
 
 
     /**
-     * @return can push operand to the top of the stack
+     * Check if the unit is operator
      */
-    protected boolean isPushOperandAllowed() {
-        Object lastToken = getLastToken();
-        return tokens.isEmpty() ||
-            this.isTokenOperator(lastToken) ||
-            lastToken == Parentheses.OPENING_PAREN ||
-            lastToken == Tokenizer.FUNCTION_ARGUMENT_SEPARATOR;
+    protected boolean isOperator(Object unit) {
+        return (unit instanceof Class) && Operator.class.isAssignableFrom((Class)unit);
     }
 
 
     /**
-     * Check if the token is operator
+     * Check if the unit is operator
      */
-    protected boolean isTokenOperator(Object token) {
-        return (token instanceof Class) && Operator.class.isAssignableFrom((Class)token);
+    protected boolean isOperand(Object unit) {
+        return (unit instanceof Operand);
     }
 
 
     /**
-     * Open parenthesis
+     * Retrieve operator tokens
      */
-    protected Tokenizer<T> openParenthesis() {
-        this.tokens.add(Parentheses.OPENING_PAREN);
-        this.openedParenthesisCount++;
-
-        return this;
+    protected List<Object> getOperatorTokens(Class<? extends Operator> operator) {
+        return Arrays.asList(operator);
     }
 
 
     /**
-     * Close parenthesis
+     * @return tokens stack of expression
      */
-    protected Tokenizer<T> closeParenthesis() {
-        if (this.openedParenthesisCount <= 0) {
-            throw new IllegalStateException("ExpressionBuilder has no any opened parenthesis");
-        }
-        if (this.getLastToken() instanceof Operator) {
-            throw new IllegalStateException("Close parenthesis can't be placed after operator");
+    protected List<Object> getExpressionTokens(ExpressionBuilder<T> eb) {
+        List<Object> tokens = new ArrayList<>();
+
+        for (Object unit: eb.getUnits()) {
+            if (isOperator(unit)) {
+                tokens.addAll(this.getOperatorTokens((Class<? extends Operator>) unit));
+            } else if (isOperand(unit)) {
+                tokens.addAll(this.getOperandTokens((Operand)unit));
+            } else {
+                throw new IllegalArgumentException("Expression units can be only operand and operators");
+            }
         }
 
-        this.tokens.add(Parentheses.CLOSING_PAREN);
-        this.openedParenthesisCount--;
-
-        return this;
+        return tokens;
     }
 
 
     /**
-     * Push operator to the stack
+     * Retrieve operand supplier tokens
      */
-    protected Tokenizer<T> pushOperator(Class<? extends Operator> operator) {
-        if (tokens.isEmpty()) {
-            throw new IllegalStateException("operators.Operator can't be the first token in expressionBuilder");
-        }
-
-        if (isTokenOperator(getLastToken())) {
-            throw new IllegalStateException("operators.Operator can't forward another operator");
-        }
-
-        tokens.add(operator);
-
-        return this;
+    protected List<Object> getOperandSupplierTokens(OperandSupplier<T> operand) {
+        return Arrays.asList(operand);
     }
 
 
     /**
-     * Push operand supplier to the stack
+     * Retrieve function tokens
      */
-    protected Tokenizer<T> pushOperandSupplier(OperandSupplier<T> operand) {
-        this.tokens.add(operand);
-        return this;
-    }
+    protected List<Object> getFunctionTokens(Function<T> function) {
+        List<Object> tokens = new ArrayList<>();
 
-
-    /**
-     * Push operand to the stack
-     */
-    protected Tokenizer<T> pushFunction(Function<T> function) {
         tokens.add(function);
-        this.openParenthesis();
+        tokens.add(Parentheses.OPENING_PAREN);
 
         int ind = 0;
         for (Operand<T> arg: function.getArgs()) {
-            this.pushOperand(arg);
+            tokens.addAll(this.getOperandTokens(arg));
 
             if (++ind < function.getArgs().size()) {
                 tokens.add(Tokenizer.FUNCTION_ARGUMENT_SEPARATOR);
             }
         }
 
-        this.closeParenthesis();
+        tokens.add(Parentheses.CLOSING_PAREN);
 
-        return this;
+        return tokens;
     }
 
 
     /**
-     * Push units from another expressionBuilder. I.e. adds expressionBuilder in brackets
+     * Retrieve units from another expressionBuilder. I.e. adds expressionBuilder in brackets
      */
-    protected Tokenizer<T> pushGroup(Tokenizer<T> group) {
-        this.openParenthesis();
-        tokens.addAll(group.getTokens());
-        this.closeParenthesis();
+    protected List<Object> getGroupTokens(ExpressionBuilder<T> eb) {
+        List<Object> tokens = new ArrayList<>();
 
-        return this;
+        tokens.add(Parentheses.OPENING_PAREN);
+        tokens.addAll(this.getExpressionTokens(eb));
+        tokens.add(Parentheses.CLOSING_PAREN);
+
+        return tokens;
     }
 
 
     /**
-     * Add operator and operand to the units stack
+     * @return operand tokens
      */
-    protected Tokenizer<T> push(Class<? extends Operator> operator, Operand<T> operand) {
-        this.pushOperator(operator);
-        this.pushOperand(operand);
-
-        return this;
-    }
-
-
-    /****************************
-     *
-     *    Public interface
-     *
-     ***************************/
-
-
-    /**
-     * Push operand to the stack
-     */
-    public Tokenizer<T> pushOperand(T operand) {
-        // replace T with operands.OperandSupplier
-        this.pushOperand(new OperandSupplier<>(operand));
-        return this;
-    }
-
-
-    /**
-     * Push operand to the stack
-     */
-    public Tokenizer<T> pushOperand(Operand<T> operand) {
-        if (!isPushOperandAllowed()) {
-            throw new IllegalStateException("operands.Operand must be placed forward operator or be the first token in expressionBuilder");
-        }
-
+    protected List<Object> getOperandTokens(Operand<T> operand) {
         if (operand instanceof Function) {
-            this.pushFunction((Function<T>)operand);
-        } else if (operand instanceof Tokenizer) {
-            this.pushGroup((Tokenizer<T>)operand);
+            return this.getFunctionTokens((Function<T>)operand);
+        } else if (operand instanceof ExpressionBuilder) {
+            return this.getGroupTokens((ExpressionBuilder<T>)operand);
         } else if (operand instanceof OperandSupplier) {
-            this.pushOperandSupplier((OperandSupplier<T>)operand);
+            return this.getOperandSupplierTokens((OperandSupplier<T>)operand);
         } else {
-            throw new IllegalArgumentException("Argument should be instance of Function, ExpressionBuilder or operands.OperandSupplier");
+            throw new IllegalArgumentException("Argument should be instance of Function, ExpressionBuilder or OperandSupplier");
         }
-
-        return this;
-    }
-
-
-    /**
-     * Add operand to expressionBuilder. <br>
-     * If operand is ExpressionBuilder operand will be considered as group in brackets.
-     */
-    public Tokenizer<T> add(Operand<T> operand) {
-        this.push(AddOperator.class, operand);
-        return this;
-    }
-
-
-    /**
-     * Subtract operand from expressionBuilder. <br>
-     * If operand is ExpressionBuilder operand will be considered as group in brackets.
-     */
-    public Tokenizer<T> subtract(Operand<T> operand) {
-        this.push(SubtractOperator.class, operand);
-        return this;
-    }
-
-
-    /**
-     * Add multiplying to operand to expressionBuilder. Be aware of operators precedence. <br>
-     * If operand is ExpressionBuilder operand will be considered as group in brackets.
-     */
-    public Tokenizer<T> multiply(Operand<T> operand) {
-        this.push(MultiplyOperator.class, operand);
-        return this;
-    }
-
-
-    /**
-     * Add dividing by operand to expressionBuilder. Be aware of operators precedence. <br>
-     * If operand is ExpressionBuilder operand will be considered as group in brackets.
-     */
-    public Tokenizer<T> divide(Operand<T> operand) {
-        this.push(DivideOperator.class, operand);
-        return this;
-    }
-
-
-    /**
-     * @return the expressionBuilder units stack
-     */
-    public List<Object> getTokens() {
-        return this.tokens;
     }
 }
