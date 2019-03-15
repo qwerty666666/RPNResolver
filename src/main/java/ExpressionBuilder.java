@@ -168,6 +168,38 @@ public class ExpressionBuilder<T> implements Operand<T> {
 
 
     /**
+     * Add operand to expressionBuilder.
+     */
+    public ExpressionBuilder<T> add(T operand) {
+        return this.add(new OperandSupplier<>(operand));
+    }
+
+
+    /**
+     * Subtract operand from expressionBuilder.
+     */
+    public ExpressionBuilder<T> subtract(T operand) {
+        return this.subtract(new OperandSupplier<>(operand));
+    }
+
+
+    /**
+     * Add multiplying to operand to expressionBuilder.
+     */
+    public ExpressionBuilder<T> multiply(T operand) {
+        return this.multiply(new OperandSupplier<>(operand));
+    }
+
+
+    /**
+     * Add dividing by operand to expressionBuilder.
+     */
+    public ExpressionBuilder<T> divide(T operand) {
+        return this.divide(new OperandSupplier<>(operand));
+    }
+
+
+    /**
      * @return the expressionBuilder units stack
      */
     public List<Object> getUnits() {

@@ -1,4 +1,5 @@
 import expression.ExpressionUtils;
+import functions.Function;
 import operands.Operand;
 import operands.OperandSupplier;
 import operators.AddOperator;
@@ -6,18 +7,17 @@ import operators.Operator;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 
-class TokenizerTest {
+class TokenizerImplTest {
     @Test
     void testPushOperator() {
         assertEquals(
             Operator.class,
-            new Tokenizer()
+            new TokenizerImpl()
                 .getOperatorTokens(Operator.class)
                 .get(0),
             "When push operator, it must be at the last position"
@@ -31,7 +31,7 @@ class TokenizerTest {
 
         assertArrayEquals(
             new Object[]{operand},
-            new Tokenizer()
+            new TokenizerImpl()
                 .getOperandSupplierTokens(operand)
                 .toArray(),
             "OperandSupplier must be simply added"
@@ -41,18 +41,17 @@ class TokenizerTest {
 
     @Test
     void testGetFunctionTokens() {
-        Function f = Mockito.mock(Function.class, Mockito.CALLS_REAL_METHODS);
         Operand arg1 = Mockito.mock(OperandSupplier.class);
         Operand arg2 = Mockito.mock(OperandSupplier.class);
-        f.args = Arrays.asList(arg1, arg2);
+        Function f = new Function(arg1, arg2);
 
         assertArrayEquals(
-            new Tokenizer().getFunctionTokens(f).toArray(),
+            new TokenizerImpl().getFunctionTokens(f).toArray(),
             new Object[] {
                 f,
                 Parentheses.OPENING_PAREN,
                     arg1,
-                    Tokenizer.FUNCTION_ARGUMENT_SEPARATOR,
+                    TokenizerImpl.FUNCTION_ARGUMENT_SEPARATOR,
                     arg2,
                 Parentheses.CLOSING_PAREN,
             },
@@ -68,7 +67,7 @@ class TokenizerTest {
         Operand operand3 = Mockito.mock(OperandSupplier.class);
         Operand operand4 = Mockito.mock(OperandSupplier.class);
 
-        List<Object> tokens = new Tokenizer().getGroupTokens(
+        List<Object> tokens = new TokenizerImpl().getGroupTokens(
                 new ExpressionBuilder()
                     .pushOperand(operand1)
                     .add(new ExpressionBuilder()
@@ -106,5 +105,19 @@ class TokenizerTest {
                 assertTrue(ExpressionUtils.isTokenOperator(Operator.class));
             }
         );
+    }
+
+
+
+    @Test
+    void testExpressions() {
+        new ExpressionBuilder<Integer>()
+            .add(3)
+            .add(4)
+            .multiply(2)
+            .divide(new ExpressionBuilder<Integer>()
+                .add(1)
+                .subtract(5)
+            );
     }
 }
