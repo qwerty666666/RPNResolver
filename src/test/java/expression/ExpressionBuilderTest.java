@@ -1,12 +1,12 @@
-import expression.ExpressionUtils;
+package expression;
+
+import expression.ExpressionBuilder;
 import operands.Operand;
 import operands.OperandSupplier;
 import operators.AddOperator;
 import operators.Operator;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 

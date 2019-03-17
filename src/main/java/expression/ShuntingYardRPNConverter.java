@@ -1,4 +1,5 @@
-import expression.ExpressionUtils;
+package expression;
+
 import functions.Function;
 import functions.FunctionExecutor;
 import operands.OperandSupplier;
@@ -20,14 +21,15 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
     protected Stack<Object> operatorStack = new Stack<>();
 
     protected Map<Class<? extends Operator<T>>, Operator<T>> operatorsMap;
-    protected Map<Class<? extends Function<T>>, FunctionExecutor<T>> functionsMap;
+    protected Map<Class<? extends Function<T>>, FunctionExecutor<T, ? extends Function<T>>> functionsMap;
 
 
     public ShuntingYardRPNConverter(
             Map<Class<? extends Operator<T>>, Operator<T>> operatorsMap,
-            Map<Class<? extends Function<T>>, FunctionExecutor<T>> functionsMap
+            Map<Class<? extends Function<T>>, FunctionExecutor<T, ? extends Function<T>>> functionsMap
     ) {
         this.operatorsMap = operatorsMap;
+        this.functionsMap = functionsMap;
     }
 
 
@@ -39,7 +41,7 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
     }
 
 
-    protected FunctionExecutor<T> getFunctionExecutor(Class functionClass) {
+    protected FunctionExecutor<T, ? extends Function<T>> getFunctionExecutor(Class functionClass) {
         if (this.functionsMap.containsKey(functionClass)) {
             return this.functionsMap.get(functionClass);
         }
@@ -92,10 +94,14 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
                     RPNStack.push(operatorStack.pop());
                 }
 
-                if (operatorStack.peek() == Parentheses.OPENING_PAREN) {
-                    operatorStack.pop();
-                } else {
+                if (operatorStack.isEmpty()) {
                     throw new IllegalArgumentException("Opening paren is missed");
+                }
+
+                operatorStack.pop();  // remove opening paren
+
+                if (!operatorStack.isEmpty() && (operatorStack.peek() instanceof Function)) {
+                    RPNStack.push(operatorStack.pop());
                 }
             } else {
                 throw new IllegalArgumentException("Unknown token type " + token.getClass());

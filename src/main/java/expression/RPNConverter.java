@@ -1,11 +1,6 @@
-import expression.ExpressionUtils;
-import operands.OperandSupplier;
-import operators.Operator;
-import operators.OperatorAssociativity;
+package expression;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Stack;
 
 
 public interface RPNConverter<T> {

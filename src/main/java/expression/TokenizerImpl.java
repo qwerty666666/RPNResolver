@@ -1,4 +1,5 @@
-import expression.ExpressionUtils;
+package expression;
+
 import functions.Function;
 import operands.Operand;
 import operands.OperandSupplier;
@@ -12,7 +13,7 @@ import java.util.List;
 
 public class TokenizerImpl<T> implements Tokenizer<T> {
     /**
-     * Tokenize the expression to to plain tokens
+     * Tokenize the expression to plain tokens
      *
      * @return tokens stack
      */
@@ -68,8 +69,12 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
         tokens.add(Parentheses.OPENING_PAREN);
 
         int ind = 0;
-        for (Operand<T> arg: function.getArgs()) {
-            tokens.addAll(this.getOperandTokens(arg));
+        for (Object arg: function.getArgs()) {
+            if (arg instanceof Operand) {
+                tokens.addAll(this.getOperandTokens((Operand<T>)arg));
+            } else {
+                tokens.add(arg);
+            }
 
             if (++ind < function.getArgs().size()) {
                 tokens.add(FUNCTION_ARGUMENT_SEPARATOR);

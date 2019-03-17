@@ -1,10 +1,5 @@
-import expression.ExpressionUtils;
-import operands.Operand;
-import operands.OperandSupplier;
-import operators.Operator;
+package expression;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 

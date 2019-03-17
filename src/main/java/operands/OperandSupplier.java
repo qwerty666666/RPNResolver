@@ -1,5 +1,7 @@
 package operands;
 
+import jdk.nashorn.internal.objects.annotations.Function;
+
 import java.util.function.Supplier;
 
 
@@ -19,5 +21,13 @@ public class OperandSupplier<T> implements Operand<T>, Supplier<T> {
     @Override
     public T get() {
         return val;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof OperandSupplier) {
+            return val.equals(((OperandSupplier)obj).get());
+        }
+        return false;
     }
 }
