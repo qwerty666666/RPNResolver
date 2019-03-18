@@ -18,4 +18,9 @@ public class RPNExpression<T> {
         // TODO
         return null;
     }
+
+
+    public List<Object> getTokens() {
+        return tokens;
+    }
 }

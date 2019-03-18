@@ -12,6 +12,7 @@ import operators.DoubleOperator.DoubleMultiplyOperator;
 import operators.DoubleOperator.DoubleSubtractOperator;
 
 import java.util.HashMap;
+import java.util.Map;
 
 
 public class ExpressionUtils {
@@ -32,7 +33,7 @@ public class ExpressionUtils {
     }
 
 
-    public static HashMap<Class<? extends Operator>, Operator<Double>> DOUBLE_OPERATORS_MAP = new HashMap<>();
+    public static Map<Class<? extends Operator>, Operator<Double>> DOUBLE_OPERATORS_MAP = new HashMap<>();
     static {
         DOUBLE_OPERATORS_MAP.put(AddOperator.class, new DoubleAddOperator());
         DOUBLE_OPERATORS_MAP.put(SubtractOperator.class, new DoubleSubtractOperator());
@@ -41,8 +42,8 @@ public class ExpressionUtils {
     }
 
 
-    public static HashMap<Class<? extends Function>, FunctionExecutor<Double, ? extends Function<Double>>> DOUBLE_FUNCTIONS_MAP = new HashMap<>();
+    public static Map<Class<? extends Function>, FunctionExecutor<Double, ? extends Function<Double>>> DOUBLE_FUNCTIONS_MAP = new HashMap<>();
     static {
-        DOUBLE_FUNCTIONS_MAP.put(Pow.class, new DoublePowExecutor());
+        DOUBLE_FUNCTIONS_MAP.put(Pow.class, (Pow<Double> function) -> Math.pow(function.getOperand(), function.getPow()));
     }
 }
