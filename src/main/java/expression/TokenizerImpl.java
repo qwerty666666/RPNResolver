@@ -112,7 +112,7 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
         } else if (operand instanceof OperandSupplier) {
             return this.getOperandSupplierTokens((OperandSupplier<T>)operand);
         } else {
-            throw new IllegalArgumentException("Argument should be instance of functions.Function, ExpressionBuilder or OperandSupplier");
+            throw new IllegalArgumentException("Argument should be instance of Function, ExpressionBuilder or OperandSupplier");
         }
     }
 }

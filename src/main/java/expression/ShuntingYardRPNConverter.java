@@ -34,7 +34,7 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
 
 
     protected Operator<T> getOperator(Class operatorClass) {
-        if (this.operatorsMap.containsKey(operatorClass)) {
+        if (this.operatorsMap != null && this.operatorsMap.containsKey(operatorClass)) {
             return this.operatorsMap.get(operatorClass);
         }
         throw new IllegalArgumentException("Operator implementation for " + operatorClass + "doesn't provided");
@@ -42,7 +42,7 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
 
 
     protected FunctionExecutor<T, ? extends Function<T>> getFunctionExecutor(Class functionClass) {
-        if (this.functionsMap.containsKey(functionClass)) {
+        if (this.functionsMap != null && this.functionsMap.containsKey(functionClass)) {
             return this.functionsMap.get(functionClass);
         }
         throw new IllegalArgumentException("FunctionExecutor implementation for " + functionClass + "doesn't provided");
