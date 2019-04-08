@@ -5,6 +5,8 @@ import functions.FunctionExecutor;
 import operands.Operand;
 import operators.Operator;
 import operators.OperatorAssociativity;
+import providers.FunctionExecutorProvider;
+import providers.OperatorProvider;
 
 import java.util.List;
 import java.util.Map;
@@ -20,32 +22,23 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
     protected Stack<Object> RPNStack = new Stack<>();
     protected Stack<Object> operatorStack = new Stack<>();
 
-    protected Map<Class<? extends Operator>, Operator<T>> operatorsMap;
-    protected Map<Class<? extends Function>, FunctionExecutor<T, ? extends Function<T>>> functionsMap;
+    protected OperatorProvider<T> operatorProvider;
+    protected FunctionExecutorProvider<T> functionExecutorProvider;
 
 
-    public ShuntingYardRPNConverter(
-            Map<Class<? extends Operator>, Operator<T>> operatorsMap,
-            Map<Class<? extends Function>, FunctionExecutor<T, ? extends Function<T>>> functionsMap
-    ) {
-        this.operatorsMap = operatorsMap;
-        this.functionsMap = functionsMap;
+    public ShuntingYardRPNConverter(OperatorProvider<T> operatorProvider, FunctionExecutorProvider<T> functionExecutorProvider) {
+        this.operatorProvider = operatorProvider;
+        this.functionExecutorProvider = functionExecutorProvider;
     }
 
 
     protected Operator<T> getOperator(Class operatorClass) {
-        if (this.operatorsMap != null && this.operatorsMap.containsKey(operatorClass)) {
-            return this.operatorsMap.get(operatorClass);
-        }
-        throw new IllegalArgumentException("Operator implementation for " + operatorClass + "doesn't provided");
+        return this.operatorProvider.get(operatorClass);
     }
 
 
     protected FunctionExecutor<T, ? extends Function<T>> getFunctionExecutor(Class functionClass) {
-        if (this.functionsMap != null && this.functionsMap.containsKey(functionClass)) {
-            return this.functionsMap.get(functionClass);
-        }
-        throw new IllegalArgumentException("FunctionExecutor implementation for " + functionClass + "doesn't provided");
+        return this.functionExecutorProvider.get(functionClass);
     }
 
 
@@ -64,8 +57,9 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
                 break;
             }
 
-            if (topOperator instanceof Function) {
-                RPNStack.push(this.getFunctionExecutor(operatorStack.pop().getClass()));
+            if (topOperator instanceof FunctionExecutor) {
+                RPNStack.push(token);
+                operatorStack.pop();
                 continue;
             }
 

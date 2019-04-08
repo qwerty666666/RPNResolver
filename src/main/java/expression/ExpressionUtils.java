@@ -31,19 +31,4 @@ public class ExpressionUtils {
     static boolean isTokenOperand(Object unit) {
         return (unit instanceof Operand);
     }
-
-
-    public static Map<Class<? extends Operator>, Operator<Double>> DOUBLE_OPERATORS_MAP = new HashMap<>();
-    static {
-        DOUBLE_OPERATORS_MAP.put(AddOperator.class, new DoubleAddOperator());
-        DOUBLE_OPERATORS_MAP.put(SubtractOperator.class, new DoubleSubtractOperator());
-        DOUBLE_OPERATORS_MAP.put(MultiplyOperator.class, new DoubleMultiplyOperator());
-        DOUBLE_OPERATORS_MAP.put(DivideOperator.class, new DoubleDivideOperator());
-    }
-
-
-    public static Map<Class<? extends Function>, FunctionExecutor<Double, ? extends Function<Double>>> DOUBLE_FUNCTIONS_MAP = new HashMap<>();
-    static {
-        DOUBLE_FUNCTIONS_MAP.put(Pow.class, (Pow<Double> function) -> Math.pow(function.getOperand(), function.getPow()));
-    }
 }

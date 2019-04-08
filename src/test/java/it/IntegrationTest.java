@@ -9,6 +9,8 @@ import operators.DivideOperator;
 import operators.MultiplyOperator;
 import operators.SubtractOperator;
 import org.junit.jupiter.api.*;
+import providers.DoubleFunctionExecutorProvider;
+import providers.DoubleOperatorProvider;
 
 import java.util.List;
 
@@ -101,7 +103,7 @@ public class IntegrationTest {
     @Order(2)
     @DisplayName("RPN has correct stack")
     void testRPNResolver() {
-        RPNExpression expr = new ShuntingYardRPNConverter<>(ExpressionUtils.DOUBLE_OPERATORS_MAP, ExpressionUtils.DOUBLE_FUNCTIONS_MAP)
+        RPNExpression expr = new ShuntingYardRPNConverter<>(new DoubleOperatorProvider(), new DoubleFunctionExecutorProvider())
             .convert(tokens);
 
         assertArrayEquals(
