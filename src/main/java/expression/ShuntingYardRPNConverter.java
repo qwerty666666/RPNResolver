@@ -58,20 +58,21 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
             }
 
             if (topOperator instanceof FunctionExecutor) {
-                RPNStack.push(token);
+                RPNStack.push(topOperator);
                 operatorStack.pop();
                 continue;
             }
 
-            if (ExpressionUtils.isTokenOperator(topOperator)) {
-                int tokenPrecedence = (token).getPrecedence();
+            if (topOperator instanceof Operator) {
+                int tokenPrecedence = token.getPrecedence();
                 int topTokenPrecedence = ((Operator)topOperator).getPrecedence();
                 OperatorAssociativity topTokenAssociativity = ((Operator)topOperator).getAssociativity();
 
                 if ((topTokenPrecedence > tokenPrecedence) ||
                     ((topTokenPrecedence == tokenPrecedence) && (topTokenAssociativity == OperatorAssociativity.LEFT_ASSOCIATIVE))
                 ) {
-                    RPNStack.push(this.getOperator(operatorStack.pop().getClass()));
+                    RPNStack.push(topOperator);
+                    operatorStack.pop();
                     continue;
                 }
             }
