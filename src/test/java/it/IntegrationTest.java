@@ -1,20 +1,31 @@
 package it;
 
 import expression.*;
+import functions.DoublePowExecutor;
 import functions.Function;
+import functions.FunctionExecutor;
 import functions.Pow;
 import operands.OperandSupplier;
 import operators.AddOperator;
 import operators.DivideOperator;
+import operators.DoubleOperator.DoubleAddOperator;
+import operators.DoubleOperator.DoubleDivideOperator;
+import operators.DoubleOperator.DoubleMultiplyOperator;
+import operators.DoubleOperator.DoubleSubtractOperator;
 import operators.MultiplyOperator;
 import operators.SubtractOperator;
 import org.junit.jupiter.api.*;
+import org.mockito.Mockito;
 import providers.DoubleFunctionExecutorProvider;
 import providers.DoubleOperatorProvider;
+import providers.FunctionExecutorProvider;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -24,8 +35,8 @@ public class IntegrationTest {
     ExpressionBuilder eb;
     List<Object> tokens;
 
-
-    @BeforeEach
+// 3 4 + 128 * 1 3 - 2 pow 3 pow /
+    @BeforeAll
     void createExpression() {
         eb = new ExpressionBuilder<Double>()
             .add(3.)
@@ -64,11 +75,16 @@ public class IntegrationTest {
     }
 
 
+    List<Object> getTokens() {
+        return new TokenizerImpl<Double>().tokenize(eb);
+    }
+
+
     @Test
     @Order(1)
     @DisplayName("Tokenizer returns correct stack")
     void testExpression() {
-        tokens = new TokenizerImpl<Double>().tokenize(eb);
+        tokens = this.getTokens();
 
         assertTokensEquals(
             new Object[]{
@@ -101,14 +117,30 @@ public class IntegrationTest {
 
     @Test
     @Order(2)
-    @DisplayName("RPN has correct stack")
+    @DisplayName("RPN returns correct stack")
     void testRPNResolver() {
-        RPNExpression expr = new ShuntingYardRPNConverter<>(new DoubleOperatorProvider(), new DoubleFunctionExecutorProvider())
-            .convert(tokens);
+        FunctionExecutor fe = new DoublePowExecutor();
+        FunctionExecutorProvider fep = mock(FunctionExecutorProvider.class);
+        when(fep.get(Pow.class)).thenReturn(fe);
+
+        RPNExpression expr = new ShuntingYardRPNConverter<>(new DoubleOperatorProvider(), fep)
+            .convert(this.getTokens());
 
         assertArrayEquals(
             new Object[] {
-
+                new OperandSupplier<>(3.),
+                new OperandSupplier<>(4.),
+                new OperandSupplier<>(128.),
+                new DoubleMultiplyOperator(),
+                new OperandSupplier<>(1.),
+                new OperandSupplier<>(3.),
+                new DoubleSubtractOperator(),
+                2.,
+                fe,
+                3.,
+                fe,
+                new DoubleDivideOperator(),
+                new DoubleAddOperator()
             },
             expr.getTokens().toArray()
         );

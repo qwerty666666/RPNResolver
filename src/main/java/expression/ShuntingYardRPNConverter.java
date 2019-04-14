@@ -19,7 +19,14 @@ import java.util.Stack;
  * @param <T>
  */
 public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
+    /**
+     * The result stack of expression items in reverse polish notation
+     */
     protected Stack<Object> RPNStack = new Stack<>();
+    /**
+     * The operator stack in Shunting Yard algorithm.
+     * Can contains any of FunctionExecutor, Parentheses.OPENING_PAREN, Parentheses.CLOSING_PAREN, Operator
+     */
     protected Stack<Object> operatorStack = new Stack<>();
 
     protected OperatorProvider<T> operatorProvider;
@@ -66,10 +73,10 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
             if (topOperator instanceof Operator) {
                 int tokenPrecedence = token.getPrecedence();
                 int topTokenPrecedence = ((Operator)topOperator).getPrecedence();
-                OperatorAssociativity topTokenAssociativity = ((Operator)topOperator).getAssociativity();
+                OperatorAssociativity tokenAssociativity = token.getAssociativity();
 
-                if ((topTokenPrecedence > tokenPrecedence) ||
-                    ((topTokenPrecedence == tokenPrecedence) && (topTokenAssociativity == OperatorAssociativity.LEFT_ASSOCIATIVE))
+                if ((topTokenPrecedence <= tokenPrecedence && tokenAssociativity == OperatorAssociativity.LEFT_ASSOCIATIVE)
+                    || (topTokenPrecedence > tokenPrecedence && tokenAssociativity == OperatorAssociativity.RIGHT_ASSOCIATIVE)
                 ) {
                     RPNStack.push(topOperator);
                     operatorStack.pop();
@@ -94,13 +101,13 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
             RPNStack.push(operatorStack.pop());
         }
 
-        if (operatorStack.isEmpty()) {
-            throw new IllegalArgumentException("Opening paren is missed");
+        if (operatorStack.isEmpty() || operatorStack.peek() != Parentheses.OPENING_PAREN) {
+            throw new IllegalStateException("Opening paren is missed");
         }
 
         operatorStack.pop();  // remove opening paren
 
-        if (!operatorStack.isEmpty() && (operatorStack.peek() instanceof Function)) {
+        if (!operatorStack.isEmpty() && (operatorStack.peek() instanceof FunctionExecutor)) {
             RPNStack.push(operatorStack.pop());
         }
     }

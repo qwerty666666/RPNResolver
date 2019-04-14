@@ -102,15 +102,4 @@ class TokenizerImplTest {
             "Groups should be added recursively"
         );
     }
-
-
-    @Test
-    void testIsOperator() {
-        assertAll("Token is operator when it is subclass of Operator.class",
-            () -> {
-                assertTrue(ExpressionUtils.isTokenOperator(AddOperator.class));
-                assertTrue(ExpressionUtils.isTokenOperator(Operator.class));
-            }
-        );
-    }
 }

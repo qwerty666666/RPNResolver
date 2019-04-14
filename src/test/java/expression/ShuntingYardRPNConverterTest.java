@@ -6,15 +6,21 @@ import static org.mockito.Mockito.*;
 
 import functions.Function;
 import functions.FunctionExecutor;
+import operands.OperandSupplier;
+import operators.AddOperator;
+import operators.DoubleOperator.DoubleAddOperator;
+import operators.DoubleOperator.DoubleMultiplyOperator;
+import operators.MultiplyOperator;
 import operators.Operator;
 import operators.OperatorAssociativity;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.*;
+import providers.DoubleFunctionExecutorProvider;
+import providers.DoubleOperatorProvider;
 import providers.FunctionExecutorProvider;
 import providers.OperatorProvider;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 
 
 class ShuntingYardRPNConverterTest {
@@ -43,10 +49,69 @@ class ShuntingYardRPNConverterTest {
     }
 
 
+    @Nested
+    class HandleCLosingParenTokenTest {
+        ShuntingYardRPNConverter converter;
+
+
+        @BeforeEach
+        void setUp() {
+            converter = new ShuntingYardRPNConverter<>(mock(OperatorProvider.class), mock(FunctionExecutorProvider.class));
+        }
+
+
+        @Test
+        void testPopAllUntilOpeningParen() {
+            Operator op1 = mock(Operator.class);
+            Operator op2 = mock(Operator.class);
+            converter.operatorStack.push(op1);
+            converter.operatorStack.push(Parentheses.OPENING_PAREN);
+            converter.operatorStack.push(op2);
+
+            converter.handleClosingParen();
+
+            assertAll("All items before opening paren must remain in operatorStack", () -> {
+                assertEquals(op1, converter.operatorStack.peek());
+                assertEquals(1, converter.operatorStack.size());
+            });
+            assertAll("All items after opening paren must be popped into RPNStack", () -> {
+                assertEquals(op2, converter.RPNStack.peek());
+                assertEquals(1, converter.RPNStack.size());
+            });
+        }
+
+
+        @Test
+        void testFunctionBeforeOpeningParenPoppedIntoRPNStack() {
+            FunctionExecutor fe = mock(FunctionExecutor.class);
+            converter.operatorStack.push(fe);
+            converter.operatorStack.push(Parentheses.OPENING_PAREN);
+
+            converter.handleClosingParen();
+
+            assertAll("Function before opening paren popped into RPNStack", () -> {
+                assertEquals(fe, converter.RPNStack.peek());
+                assertEquals(1, converter.RPNStack.size());
+            });
+        }
+
+
+        @Test
+        void testThrowsIllegalStateWhenThereIsNoOpeningParen() {
+            assertThrows(IllegalStateException.class, () -> converter.handleClosingParen());
+        }
+    }
+
 
     @Test
-    void testHandleClosingParen() {
-        throw new RuntimeException("TODO");
+    void testOperatorStackRest() {
+        ShuntingYardRPNConverter converter = new ShuntingYardRPNConverter<>(mock(OperatorProvider.class), mock(FunctionExecutorProvider.class));
+        Operator op = mock(Operator.class);
+        converter.operatorStack.push(op);
+
+        converter.convert(new ArrayList<>());
+
+        assertEquals(op, converter.RPNStack.peek(), "The rest of operatorStack should be pushed into RPNStack");
     }
 
 
@@ -61,7 +126,7 @@ class ShuntingYardRPNConverterTest {
         ShuntingYardRPNConverter converter = new ShuntingYardRPNConverter<>(mock(OperatorProvider.class), fep);
         converter.handleFunctionToken(f);
 
-        verify(fep).get(Function.class);
+        verify(fep).get(f.getClass());
         assertAll(() -> {
             assertEquals(fe, converter.operatorStack.peek(), "Function executor should be pushed to the operator stack");
             assertEquals(1, converter.operatorStack.size(), "operatorStack must contains only one element");
@@ -70,13 +135,12 @@ class ShuntingYardRPNConverterTest {
 
 
     @Nested
-    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     class HandleOperatorTokenTest {
         Operator operatorMock;
         OperatorProvider operatorProviderMock;
 
 
-        @BeforeAll
+        @BeforeEach
         void setUp() {
             operatorMock = mock(Operator.class);
             when(operatorMock.getPrecedence()).thenReturn(1);
@@ -112,9 +176,29 @@ class ShuntingYardRPNConverterTest {
 
 
         @Test
-        void testPopOperatorWithGreaterPrecedence() {
+        void testRemainOperatorWithGreaterPrecedence() {
             Operator op = mock(Operator.class);
             when(op.getPrecedence()).thenReturn(2);
+
+            ShuntingYardRPNConverter converter = new ShuntingYardRPNConverter(operatorProviderMock, mock(FunctionExecutorProvider.class));
+            converter.operatorStack.push(op);
+            converter.handleOperatorToken(Operator.class);
+
+            assertAll(
+                () -> assertAll("Operator should be pushed to stack", () -> {
+                    assertEquals(2, converter.operatorStack.size());
+                    assertEquals(operatorMock, converter.operatorStack.pop());
+                    assertEquals(op, converter.operatorStack.pop());
+                }),
+                () -> assertEquals(0, converter.RPNStack.size(), "RPN Stack shouldn't contains any element")
+            );
+        }
+
+
+        @Test
+        void testPopOperatorWithLowerPrecedence() {
+            Operator op = mock(Operator.class);
+            when(op.getPrecedence()).thenReturn(0);
 
             ShuntingYardRPNConverter converter = new ShuntingYardRPNConverter(operatorProviderMock, mock(FunctionExecutorProvider.class));
 
@@ -137,7 +221,7 @@ class ShuntingYardRPNConverterTest {
         @Test
         void testBreakOnLeftParen() {
             Operator op1 = mock(Operator.class);
-            when(op1.getPrecedence()).thenReturn(2);
+            when(op1.getPrecedence()).thenReturn(0);
 
             ShuntingYardRPNConverter converter = new ShuntingYardRPNConverter(operatorProviderMock, mock(FunctionExecutorProvider.class));
             converter.operatorStack.push(Parentheses.OPENING_PAREN);
@@ -155,5 +239,29 @@ class ShuntingYardRPNConverterTest {
                 })
             );
         }
+    }
+
+
+    @Test
+    void testPreserveOperatorsPrecedence() {
+        ShuntingYardRPNConverter<Double> converter = new ShuntingYardRPNConverter<>(new DoubleOperatorProvider(), new DoubleFunctionExecutorProvider());
+        RPNExpression<Double> expr = converter.convert(Arrays.asList(
+            new OperandSupplier<>(1),
+            AddOperator.class,
+            new OperandSupplier<>(2),
+            MultiplyOperator.class,
+            new OperandSupplier<>(3)
+        ));
+
+        assertArrayEquals(
+            new Object[] {
+                new OperandSupplier<>(1),
+                new OperandSupplier<>(2),
+                new OperandSupplier<>(3),
+                new DoubleMultiplyOperator(),
+                new DoubleAddOperator()
+            },
+            expr.getTokens().toArray()
+        );
     }
 }

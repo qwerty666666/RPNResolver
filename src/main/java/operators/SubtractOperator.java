@@ -10,4 +10,9 @@ public abstract class SubtractOperator<T> implements Operator<T> {
     public OperatorAssociativity getAssociativity() {
         return OperatorAssociativity.LEFT_ASSOCIATIVE;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj != null && obj.getClass() == this.getClass();
+    }
 }
