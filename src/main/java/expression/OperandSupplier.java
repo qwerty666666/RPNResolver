@@ -1,13 +1,11 @@
-package operands;
-
-import jdk.nashorn.internal.objects.annotations.Function;
+package expression;
 
 import java.util.function.Supplier;
 
 
 /**
- * Class for supplying plain operands to expressionBuilder.
- * E.g. in ExpressionBuilder<Integer> operand "3" will be converted to OperandSupplier<Integer>(3)
+ * Class for supplying plain operands to Expression.
+ * E.g. operand "3" will be converted to OperandSupplier<Integer>(3)
  *
  * @param <T>
  */

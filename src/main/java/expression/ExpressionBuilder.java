@@ -1,7 +1,5 @@
 package expression;
 
-import operands.Operand;
-import operands.OperandSupplier;
 import operators.*;
 
 import java.util.ArrayList;
@@ -37,7 +35,7 @@ import java.util.List;
  *          .multiply(3);
  *
  *     // this is equals to (1 - 2) * 3
- *     new ExpressionBuilder<Integer> eb = new ExpressionBuilder<>()
+ *     ExpressionBuilder<Integer> eb = new ExpressionBuilder<>()
  *          .add(new ExpressionBuilder<Integer>()
  *                  .add(1)
  *                  .subtract(2)
@@ -52,13 +50,13 @@ public class ExpressionBuilder<T> implements Operand<T> {
     /**
      * Stack expressionBuilder units.
      */
-    protected List<Object> units = new ArrayList<>();
+    protected List<Token> units = new ArrayList<>();
 
 
     /**
      * @return The last unit in the stack
      */
-    protected Object getLastUnit() {
+    protected Token getLastUnit() {
         if (units.isEmpty()) {
             return null;
         }
@@ -69,13 +67,13 @@ public class ExpressionBuilder<T> implements Operand<T> {
     /**
      * Push operator to the stack
      */
-    protected ExpressionBuilder<T> pushOperator(Class<? extends Operator> operator) {
+    protected ExpressionBuilder<T> pushOperator(Operator<T> operator) {
         if (units.isEmpty()) {
-            throw new IllegalStateException("operators.Operator can't be the first token in expressionBuilder");
+            throw new IllegalStateException("Operator can't be the first token in expressionBuilder");
         }
 
-        if (ExpressionUtils.isTokenOperator(getLastUnit())) {
-            throw new IllegalStateException("operators.Operator can't forward another operator");
+        if (Token.isTokenOperator(getLastUnit())) {
+            throw new IllegalStateException("Operator can't forward another operator");
         }
 
         units.add(operator);
@@ -98,11 +96,12 @@ public class ExpressionBuilder<T> implements Operand<T> {
      * Push operand to the stack
      */
     protected ExpressionBuilder<T> pushOperand(Operand<T> operand) {
-        if (!units.isEmpty() && ExpressionUtils.isTokenOperand(getLastUnit())) {
+        if (!units.isEmpty() && Token.isTokenOperand(getLastUnit())) {
             throw new IllegalStateException("Can't push operand forward another operand");
         }
 
         units.add(operand);
+
         return this;
     }
 
@@ -110,7 +109,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
     /**
      * Add operator and operand to the units stack
      */
-    protected ExpressionBuilder<T> push(Class<? extends Operator> operator, Operand<T> operand) {
+    protected ExpressionBuilder<T> push(Operator<T> operator, Operand<T> operand) {
         if (this.units.size() > 0) {
             this.pushOperator(operator);
         }
@@ -133,8 +132,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
      * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
     public ExpressionBuilder<T> add(Operand<T> operand) {
-        this.push(AddOperator.class, operand);
-        return this;
+        return this.push(new AddOperator<>(), operand);
     }
 
 
@@ -143,8 +141,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
      * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
     public ExpressionBuilder<T> subtract(Operand<T> operand) {
-        this.push(SubtractOperator.class, operand);
-        return this;
+        return this.push(new SubtractOperator<>(), operand);
     }
 
 
@@ -153,8 +150,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
      * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
     public ExpressionBuilder<T> multiply(Operand<T> operand) {
-        this.push(MultiplyOperator.class, operand);
-        return this;
+        return this.push(new MultiplyOperator<>(), operand);
     }
 
 
@@ -163,8 +159,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
      * If operand is ExpressionBuilder operand will be considered as group in brackets.
      */
     public ExpressionBuilder<T> divide(Operand<T> operand) {
-        this.push(DivideOperator.class, operand);
-        return this;
+        return this.push(new DivideOperator<>(), operand);
     }
 
 
@@ -203,7 +198,7 @@ public class ExpressionBuilder<T> implements Operand<T> {
     /**
      * @return the expressionBuilder units stack
      */
-    public List<Object> getUnits() {
+    public List<Token> getUnits() {
         return this.units;
     }
 }

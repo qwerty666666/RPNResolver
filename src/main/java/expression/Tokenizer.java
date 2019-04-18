@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * Tokenize the expression.
- * Split giver expression into operators, operands, functions, brackets and so on.
+ * Split given expression into operators, operands, functions, brackets and so on.
  *
  * @param <T>
  */
@@ -13,7 +13,7 @@ public interface Tokenizer<T> {
     /**
      * Token representing arguments separator in functions
      */
-    public static Object FUNCTION_ARGUMENT_SEPARATOR = new Object();
+     Token FUNCTION_ARGUMENT_SEPARATOR = new Token(){};
 
 
     /**
@@ -21,5 +21,5 @@ public interface Tokenizer<T> {
      *
      * @return tokens stack
      */
-    public List<Object> tokenize(ExpressionBuilder eb);
+    List<Token> tokenize();
 }

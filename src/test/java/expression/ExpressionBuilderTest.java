@@ -1,12 +1,9 @@
 package expression;
 
-import expression.ExpressionBuilder;
-import operands.Operand;
-import operands.OperandSupplier;
 import operators.AddOperator;
-import operators.Operator;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,11 +11,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class ExpressionBuilderTest {
     @Test
     void testPushOperatorIllegalState() {
+        Operator operatorMock = mock(Operator.class);
+        Operand operandMock = mock(Operand.class);
+
         assertThrows(
             IllegalStateException.class,
             () -> {
                 new ExpressionBuilder<>()
-                    .pushOperator(Operator.class);
+                    .pushOperator(operatorMock);
             },
             "Operator can't be at the first position in expressionBuilder"
         );
@@ -26,9 +26,9 @@ class ExpressionBuilderTest {
             IllegalStateException.class,
             () -> {
                 new ExpressionBuilder<>()
-                    .pushOperand(Mockito.mock(OperandSupplier.class))
-                    .pushOperator(Operator.class)
-                    .pushOperator(Operator.class);
+                    .pushOperand(operandMock)
+                    .pushOperator(operatorMock)
+                    .pushOperator(operatorMock);
             },
             "Operators can't go after another operator"
         );
@@ -50,11 +50,13 @@ class ExpressionBuilderTest {
 
     @Test
     void testPushOperator() {
+        Operator op = mock(Operator.class);
+
         ExpressionBuilder expr = new ExpressionBuilder();
         expr.pushOperand(Mockito.mock(OperandSupplier.class))
-            .pushOperator(Operator.class);
+            .pushOperator(op);
 
-        assertEquals(expr.getLastUnit(), Operator.class, "When push operator, it must be at the last position");
+        assertEquals(op, expr.getLastUnit(), "When push operator, it must be at the last position");
     }
 
 
@@ -72,14 +74,14 @@ class ExpressionBuilderTest {
     void testPush() {
         Operand operand = Mockito.mock(OperandSupplier.class);
         ExpressionBuilder e = new ExpressionBuilder()
-            .push(AddOperator.class, operand)
-            .push(AddOperator.class, operand);
+            .push(new AddOperator(), operand)
+            .push(new AddOperator(), operand);
 
         assertAll("push",
-            () -> assertNotEquals(AddOperator.class, e.getUnits().get(0),
+            () -> assertNotEquals(new AddOperator<>(), e.getUnits().get(0),
                 "When call push method for the first time (when stack is empty), operator must be omitted"
             ),
-            () -> assertEquals(AddOperator.class, e.getUnits().get(1),
+            () -> assertEquals(new AddOperator<>(), e.getUnits().get(1),
                 "Must add operator to the units stack"
             ),
             () -> assertEquals(operand, e.getLastUnit(),

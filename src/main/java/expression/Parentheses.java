@@ -1,6 +1,6 @@
 package expression;
 
-public enum Parentheses {
+public enum Parentheses implements Token {
     /**
      * (
      */

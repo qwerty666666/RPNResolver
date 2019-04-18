@@ -1,15 +1,6 @@
 package expression;
 
-import functions.Function;
-import functions.FunctionExecutor;
-import operands.Operand;
-import operators.Operator;
-import operators.OperatorAssociativity;
-import providers.FunctionExecutorProvider;
-import providers.OperatorProvider;
-
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 
 
@@ -22,49 +13,28 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
     /**
      * The result stack of expression items in reverse polish notation
      */
-    protected Stack<Object> RPNStack = new Stack<>();
+    protected Stack<Token> RPNStack = new Stack<>();
     /**
      * The operator stack in Shunting Yard algorithm.
-     * Can contains any of FunctionExecutor, Parentheses.OPENING_PAREN, Parentheses.CLOSING_PAREN, Operator
+     * Can contains any of Function, Parentheses.OPENING_PAREN, Parentheses.CLOSING_PAREN, Operator
      */
-    protected Stack<Object> operatorStack = new Stack<>();
-
-    protected OperatorProvider<T> operatorProvider;
-    protected FunctionExecutorProvider<T> functionExecutorProvider;
+    protected Stack<Token> operatorStack = new Stack<>();
 
 
-    public ShuntingYardRPNConverter(OperatorProvider<T> operatorProvider, FunctionExecutorProvider<T> functionExecutorProvider) {
-        this.operatorProvider = operatorProvider;
-        this.functionExecutorProvider = functionExecutorProvider;
+    protected void handleFunctionToken(Function<T> token) {
+        operatorStack.push(token);
     }
 
 
-    protected Operator<T> getOperator(Class operatorClass) {
-        return this.operatorProvider.get(operatorClass);
-    }
-
-
-    protected FunctionExecutor<T, ? extends Function<T>> getFunctionExecutor(Class functionClass) {
-        return this.functionExecutorProvider.get(functionClass);
-    }
-
-
-    protected void handleFunctionToken(Function token) {
-        operatorStack.push(this.getFunctionExecutor(token.getClass()));
-    }
-
-
-    protected void handleOperatorToken(Class operatorClass) {
-        Operator token = this.getOperator(operatorClass);
-
+    protected void handleOperatorToken(Operator<T> token) {
         while (!operatorStack.isEmpty()) {
-            Object topOperator = operatorStack.peek();
+            Token topOperator = operatorStack.peek();
 
             if (topOperator == Parentheses.OPENING_PAREN) {
                 break;
             }
 
-            if (topOperator instanceof FunctionExecutor) {
+            if (topOperator instanceof Function) {
                 RPNStack.push(topOperator);
                 operatorStack.pop();
                 continue;
@@ -107,37 +77,39 @@ public class ShuntingYardRPNConverter<T> implements RPNConverter<T> {
 
         operatorStack.pop();  // remove opening paren
 
-        if (!operatorStack.isEmpty() && (operatorStack.peek() instanceof FunctionExecutor)) {
+        if (!operatorStack.isEmpty() && (operatorStack.peek() instanceof Function)) {
             RPNStack.push(operatorStack.pop());
         }
     }
 
 
-    protected void handleOperandToken(Object operand) {
+    protected void handleOperandToken(Operand<T> operand) {
         RPNStack.push(operand);
     }
 
 
     @Override
-    public RPNExpression<T> convert(List<Object> tokens) {
-        for (Object token: tokens) {
-            if (token instanceof Function) {
+    public RPNExpression<T> convert(List<Token> tokens) {
+        for (Token token: tokens) {
+            if (Token.isTokenFunction(token)) {
                 handleFunctionToken((Function)token);
             } else if (token == Tokenizer.FUNCTION_ARGUMENT_SEPARATOR) {
                 // ignore it
-            } else if (ExpressionUtils.isTokenOperator(token)) {
-                handleOperatorToken((Class)token);
+            } else if (Token.isTokenOperator(token)) {
+                handleOperatorToken((Operator)token);
             } else if (token == Parentheses.OPENING_PAREN) {
                 handleOpeningParen();
             } else if (token == Parentheses.CLOSING_PAREN) {
                 handleClosingParen();
+            } else if (Token.isTokenOperand(token)){
+                handleOperandToken((Operand<T>)token);
             } else {
-                handleOperandToken(token);
+                throw new IllegalArgumentException("Unknown token type " + token.getClass() + "[" + token + "]");
             }
         }
 
         while (!operatorStack.isEmpty()) {
-            Object operator = operatorStack.pop();
+            Token operator = operatorStack.pop();
             if (operator == Parentheses.CLOSING_PAREN || operator == Parentheses.OPENING_PAREN) {
                 throw new IllegalArgumentException("Mismatched parentheses");
             }

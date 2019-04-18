@@ -1,24 +1,25 @@
 package expression;
 
-import functions.Function;
-import operands.Operand;
-import operands.OperandSupplier;
-import operators.*;
-
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
 
-public class TokenizerImpl<T> implements Tokenizer<T> {
+public class ExpressionBuilderTokenizer<T> implements Tokenizer<T> {
+    protected ExpressionBuilder<T> eb;
+
+    public ExpressionBuilderTokenizer(ExpressionBuilder<T> eb) {
+        this.eb = eb;
+    }
+
     /**
      * Tokenize the expression to plain tokens
      *
      * @return tokens stack
      */
     @Override
-    public List<Object> tokenize(ExpressionBuilder eb) {
+    public List<Token> tokenize() {
         return this.getExpressionTokens(eb);
     }
 
@@ -26,24 +27,24 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
     /**
      * Retrieve operator tokens
      */
-    protected List<Object> getOperatorTokens(Class<? extends Operator> operator) {
-        return Arrays.asList(operator);
+    protected List<Token> getOperatorTokens(Operator<T> operator) {
+        return Collections.singletonList(operator);
     }
 
 
     /**
      * @return tokens stack of expression
      */
-    protected List<Object> getExpressionTokens(ExpressionBuilder<T> eb) {
-        List<Object> tokens = new ArrayList<>();
+    protected List<Token> getExpressionTokens(ExpressionBuilder<T> eb) {
+        List<Token> tokens = new ArrayList<>();
 
-        for (Object unit: eb.getUnits()) {
-            if (ExpressionUtils.isTokenOperator(unit)) {
-                tokens.addAll(this.getOperatorTokens((Class<? extends Operator>) unit));
-            } else if (ExpressionUtils.isTokenOperand(unit)) {
-                tokens.addAll(this.getOperandTokens((Operand)unit));
+        for (Token unit: eb.getUnits()) {
+            if (Token.isTokenOperator(unit)) {
+                tokens.addAll(this.getOperatorTokens((Operator<T>)unit));
+            } else if (Token.isTokenOperand(unit)) {
+                tokens.addAll(this.getOperandTokens((Operand<T>)unit));
             } else {
-                throw new IllegalArgumentException("Expression units can be only operand and operators");
+                throw new IllegalArgumentException("Unknown token type");
             }
         }
 
@@ -54,16 +55,16 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
     /**
      * Retrieve operand supplier tokens
      */
-    protected List<Object> getOperandSupplierTokens(OperandSupplier<T> operand) {
-        return Arrays.asList(operand);
+    protected List<Token> getOperandSupplierTokens(OperandSupplier<T> operand) {
+        return Collections.singletonList(operand);
     }
 
 
     /**
      * Retrieve function tokens
      */
-    protected List<Object> getFunctionTokens(Function<T> function) {
-        List<Object> tokens = new ArrayList<>();
+    protected List<Token> getFunctionTokens(Function<T> function) {
+        List<Token> tokens = new ArrayList<>();
 
         tokens.add(function);
         tokens.add(Parentheses.OPENING_PAREN);
@@ -73,7 +74,7 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
             if (arg instanceof Operand) {
                 tokens.addAll(this.getOperandTokens((Operand<T>)arg));
             } else {
-                tokens.add(arg);
+                tokens.add(new OperandSupplier<>(arg));
             }
 
             if (++ind < function.getArgs().size()) {
@@ -90,8 +91,8 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
     /**
      * Retrieve units from another expressionBuilder. I.e. adds expressionBuilder in brackets
      */
-    protected List<Object> getGroupTokens(ExpressionBuilder<T> eb) {
-        List<Object> tokens = new ArrayList<>();
+    protected List<Token> getGroupTokens(ExpressionBuilder<T> eb) {
+        List<Token> tokens = new ArrayList<>();
 
         tokens.add(Parentheses.OPENING_PAREN);
         tokens.addAll(this.getExpressionTokens(eb));
@@ -104,7 +105,7 @@ public class TokenizerImpl<T> implements Tokenizer<T> {
     /**
      * @return operand tokens
      */
-    protected List<Object> getOperandTokens(Operand<T> operand) {
+    protected List<Token> getOperandTokens(Operand<T> operand) {
         if (operand instanceof Function) {
             return this.getFunctionTokens((Function<T>)operand);
         } else if (operand instanceof ExpressionBuilder) {

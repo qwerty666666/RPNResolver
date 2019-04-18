@@ -1,7 +1,8 @@
-package functions;
+package it;
 
 
-import operands.Operand;
+import expression.Function;
+import expression.Operand;
 
 import java.util.Arrays;
 import java.util.List;
@@ -13,7 +14,6 @@ import java.util.List;
  */
 public class Pow<T> extends Function<T> {
     Operand<T> operand;
-    T operandVal = null;
     double pow;
 
     public Pow(Operand<T> operand, double pow) {
@@ -21,21 +21,8 @@ public class Pow<T> extends Function<T> {
         this.pow = pow;
     }
 
-    public void setArgs(T operand, double pow) {
-        this.operandVal = operand;
-        this.pow = pow;
-    }
-
     @Override
     public List<Object> getArgs() {
         return Arrays.asList(operand, pow);
-    }
-
-    public T getOperand() {
-        return this.operandVal;
-    }
-
-    public double getPow() {
-        return this.pow;
     }
 }

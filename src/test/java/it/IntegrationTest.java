@@ -1,56 +1,43 @@
 package it;
 
 import expression.*;
-import functions.DoublePowExecutor;
-import functions.Function;
-import functions.FunctionExecutor;
-import functions.Pow;
-import operands.OperandSupplier;
+import expression.Function;
+import expression.OperandSupplier;
 import operators.AddOperator;
 import operators.DivideOperator;
-import operators.DoubleOperator.DoubleAddOperator;
-import operators.DoubleOperator.DoubleDivideOperator;
-import operators.DoubleOperator.DoubleMultiplyOperator;
-import operators.DoubleOperator.DoubleSubtractOperator;
 import operators.MultiplyOperator;
 import operators.SubtractOperator;
 import org.junit.jupiter.api.*;
-import org.mockito.Mockito;
-import providers.DoubleFunctionExecutorProvider;
-import providers.DoubleOperatorProvider;
-import providers.FunctionExecutorProvider;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("3 + 4 * 128 / ((1 - 3)^2)^3 == 19")
+@DisplayName("3 + 4 * 128 / ((1 - 3)^2)^3 == 11")
 public class IntegrationTest {
-    ExpressionBuilder eb;
-    List<Object> tokens;
+    ExpressionBuilder<Double> eb;
+    Function<Double> pow1;
+    Function<Double> pow2;
 
-// 3 4 + 128 * 1 3 - 2 pow 3 pow /
+
     @BeforeAll
     void createExpression() {
+        pow2 = new Pow<>(
+            new ExpressionBuilder<Double>()
+                .add(1.)
+                .subtract(3.),
+            2
+        );
+        pow1 = new Pow<>(pow2,3);
         eb = new ExpressionBuilder<Double>()
             .add(3.)
             .add(4.)
             .multiply(128.)
-            .divide(new Pow<>(
-                new Pow<>(
-                    new ExpressionBuilder<Double>()
-                        .add(1.)
-                        .subtract(3.),
-                    2
-                ),
-                3
-            ));
+            .divide(pow1);
     }
 
 
@@ -75,8 +62,12 @@ public class IntegrationTest {
     }
 
 
-    List<Object> getTokens() {
-        return new TokenizerImpl<Double>().tokenize(eb);
+    List<Token> getTokens() {
+        return new ExpressionBuilderTokenizer<>(eb).tokenize();
+    }
+    
+    RPNExpression<Double> getRpnExpression() {
+        return new ShuntingYardRPNConverter<Double>().convert(this.getTokens());
     }
 
 
@@ -84,30 +75,30 @@ public class IntegrationTest {
     @Order(1)
     @DisplayName("Tokenizer returns correct stack")
     void testExpression() {
-        tokens = this.getTokens();
+        List<Token> tokens = this.getTokens();
 
-        assertTokensEquals(
+        assertArrayEquals(
             new Object[]{
                 new OperandSupplier<>(3.),
-                AddOperator.class,
+                new AddOperator<>(),
                 new OperandSupplier<>(4.),
-                MultiplyOperator.class,
+                new MultiplyOperator<>(),
                 new OperandSupplier<>(128.),
-                DivideOperator.class,
-                Pow.class,
+                new DivideOperator<>(),
+                pow1,
                 Parentheses.OPENING_PAREN,
-                    Pow.class,
+                    pow2,
                     Parentheses.OPENING_PAREN,
                         Parentheses.OPENING_PAREN,
                             new OperandSupplier<>(1.),
-                            SubtractOperator.class,
+                            new SubtractOperator<>(),
                             new OperandSupplier<>(3.),
                         Parentheses.CLOSING_PAREN,
                         Tokenizer.FUNCTION_ARGUMENT_SEPARATOR,
-                        2.,
+                        new OperandSupplier<>(2.),
                     Parentheses.CLOSING_PAREN,
                     Tokenizer.FUNCTION_ARGUMENT_SEPARATOR,
-                    3.,
+                    new OperandSupplier<>(3.),
                 Parentheses.CLOSING_PAREN
             },
             tokens.toArray()
@@ -119,30 +110,34 @@ public class IntegrationTest {
     @Order(2)
     @DisplayName("RPN returns correct stack")
     void testRPNResolver() {
-        FunctionExecutor fe = new DoublePowExecutor();
-        FunctionExecutorProvider fep = mock(FunctionExecutorProvider.class);
-        when(fep.get(Pow.class)).thenReturn(fe);
-
-        RPNExpression expr = new ShuntingYardRPNConverter<>(new DoubleOperatorProvider(), fep)
-            .convert(this.getTokens());
+        RPNExpression expr = getRpnExpression();
 
         assertArrayEquals(
             new Object[] {
                 new OperandSupplier<>(3.),
                 new OperandSupplier<>(4.),
                 new OperandSupplier<>(128.),
-                new DoubleMultiplyOperator(),
+                new MultiplyOperator(),
                 new OperandSupplier<>(1.),
                 new OperandSupplier<>(3.),
-                new DoubleSubtractOperator(),
-                2.,
-                fe,
-                3.,
-                fe,
-                new DoubleDivideOperator(),
-                new DoubleAddOperator()
+                new SubtractOperator(),
+                new OperandSupplier<>(2.),
+                pow2,
+                new OperandSupplier<>(3.),
+                pow1,
+                new DivideOperator(),
+                new AddOperator()
             },
             expr.getTokens().toArray()
         );
+    }
+
+
+    @Test
+    @Order(3)
+    @DisplayName("RPN evals correctly")
+    void testRpnExpressionEval() {
+        RPNExpression expr = getRpnExpression();
+        assertEquals(11., expr.calc(new DoubleOperatorExecutorProvider(), new DoubleFunctionExecutorProvider()));
     }
 }

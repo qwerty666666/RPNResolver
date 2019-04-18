@@ -9,5 +9,5 @@ public interface RPNConverter<T> {
      *
      * @param tokens expression tokens
      */
-    public RPNExpression<T> convert(List<Object> tokens);
+    public RPNExpression<T> convert(List<Token> tokens);
 }
