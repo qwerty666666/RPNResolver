@@ -1,4 +1,4 @@
-package operators;
+package expression;
 
 /**
  * Associativity of mathematical operators.

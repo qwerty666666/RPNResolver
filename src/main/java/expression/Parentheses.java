@@ -1,4 +1,6 @@
-public enum Parentheses {
+package expression;
+
+public enum Parentheses implements Token {
     /**
      * (
      */
